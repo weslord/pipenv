@@ -414,20 +414,29 @@ def shell(state, fancy=False, shell_args=None, anyway=False, quiet=False):
     context_settings=subcommand_context_no_interspersion,
 )
 @common_options
-@argument("command")
+@argument("command", required=False)
 @argument("args", nargs=-1)
 @pass_state
 def run(state, command, args):
     """Spawns a command installed into the virtualenv."""
-    from pipenv.routines.shell import do_run
 
-    do_run(
-        state.project,
-        command=command,
-        args=args,
-        python=state.python,
-        pypi_mirror=state.pypi_mirror,
-    )
+    if command == None:
+        from pipenv.routines.scripts import do_scripts
+
+        err.print("Usage: pipenv run [OPTIONS] COMMAND [ARGS]\n", highlight=False)
+        err.print("Error: Missing argument 'COMMAND'\n", highlight=False)
+
+        do_scripts(state)
+    else:
+        from pipenv.routines.shell import do_run
+
+        do_run(
+            state.project,
+            command=command,
+            args=args,
+            python=state.python,
+            pypi_mirror=state.pypi_mirror,
+        )
 
 
 @cli.command(
@@ -685,7 +694,6 @@ def clean(state, dry_run=False, bare=False, user=False):
         system=state.system,
     )
 
-
 @cli.command(
     short_help="Lists scripts in current environment config.",
     context_settings=subcommand_context_no_interspersion,
@@ -694,18 +702,10 @@ def clean(state, dry_run=False, bare=False, user=False):
 @pass_state
 def scripts(state):
     """Lists scripts in current environment config."""
-    if not state.project.pipfile_exists:
-        err.print("No Pipfile present at project home.")
-        sys.exit(1)
-    scripts = state.project.parsed_pipfile.get("scripts", {})
-    first_column_width = max(len(word) for word in ["Command"] + list(scripts))
-    second_column_width = max(len(word) for word in ["Script"] + list(scripts.values()))
-    lines = [f"{command:<{first_column_width}}  Script" for command in ["Command"]]
-    lines.append(f"{'-' * first_column_width}  {'-' * second_column_width}")
-    lines.extend(
-        f"{name:<{first_column_width}}  {script}" for name, script in scripts.items()
-    )
-    console.print("\n".join(line for line in lines))
+
+    from pipenv.routines.scripts import do_scripts
+
+    do_scripts(state)
 
 
 @cli.command(
